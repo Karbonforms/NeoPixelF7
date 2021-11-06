@@ -71,10 +71,6 @@ void calculate_timings()
 
     const auto reset_ticks = duration_cast<TimerTicks>(WS_2812_RESET_PERIOD_NS);
     g_ResetCycleCount = reset_ticks / (one_second_ticks / WS_2812_CLK_FREQ);
-
-    Serial.println(g_AutoReloadRegister);
-    Serial.println(g_ShortPulse);
-    Serial.println(g_ResetCycleCount);
 }
 
 void NeoPixelF7_init()

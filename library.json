@@ -1,0 +1,37 @@
+{
+  "name": "NeoPixelF7",
+  "version": "1.0.1",
+  "description": "WS2812B Driver for stm32. (Not just F7!)",
+  "keywords": "WS2812B",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/Karbonforms/NeoPixelF7.git"
+  },
+  "authors":
+  [
+    {
+      "name": "Karbonforms",
+      "email": "karbonforms@gmail.com",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": "arduino,mbed",
+  "platforms": "ststm32",
+  "examples": [
+    {
+      "name": "simple",
+      "base": "examples/simple",
+      "files": [
+        "platformio.ini",
+        "simple.cpp"
+      ]
+    },
+    {
+      "name": "Blink",
+      "base": "examples/blink",
+      "files": ["blink.cpp", "blink.h"]
+    }
+  ]
+}
