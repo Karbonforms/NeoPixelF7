@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "src/NeoPixelF7.h"
+#include "NeoPixelF7.h"
 
 #define BRIGHTNESS 40
 uint32_t LEDS[144];
