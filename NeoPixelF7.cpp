@@ -1,5 +1,5 @@
 #include <stm32f7xx_hal.h>
-#include "mbed.h"
+#include <chrono>
 
 #include "NeoPixelF7_config.h"
 
@@ -25,11 +25,6 @@ uint16_t                    g_PwmData       [(24 * NUM_PIXELS) + 50];
 
 void error_handler()
 {
-#if defined(__MBED__)
-    printf("ERROR!");
-#elif defined(__ARDUINO__)
-    Serial.prinln("ERROR!");
-#endif
     __disable_irq();
     while (true)
     {}
@@ -157,9 +152,6 @@ void NeoPixelF7_init()
 }
 
 // called by HAL_TIM_Base_Init
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
-#pragma ide diagnostic ignored "OCInconsistentNamingInspection"
 extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
 {
     if (tim_baseHandle->Instance == TIM1)
@@ -206,5 +198,3 @@ extern "C" void DMA2_Stream1_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
 }
-
-#pragma clang diagnostic pop
