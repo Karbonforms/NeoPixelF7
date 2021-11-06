@@ -1,4 +1,8 @@
+#if defined(STM32L4xx)
+#include <stm32l4xx_hal.h>
+#elif defined(STM32F7xx)
 #include <stm32f7xx_hal.h>
+#endif
 #include <chrono>
 
 #include "NeoPixelF7_config.h"
@@ -68,9 +72,15 @@ void NeoPixelF7_init()
 {
     calculate_timings();
 
+#ifdef STM32L4xx
+    __HAL_RCC_DMA1_CLK_ENABLE();
+    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+#elif defined(STM32F7xx)
     __HAL_RCC_DMA2_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+#endif
 
     TIM_ClockConfigTypeDef          clock_source_config     = {0};
     TIM_MasterConfigTypeDef         master_config           = {0};
@@ -148,9 +158,13 @@ extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     if (tim_baseHandle->Instance == TIM1)
     {
         __HAL_RCC_TIM1_CLK_ENABLE();
-
+#if defined(STM32L4xx)
+        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+        g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
+#elif defined(STM32F7xx)
         g_HdmaTim1Ch1.Instance = DMA2_Stream1;
         g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
+#endif
         g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
         g_HdmaTim1Ch1.Init.PeriphInc = DMA_PINC_DISABLE;
         g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
@@ -158,7 +172,9 @@ extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
         g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
         g_HdmaTim1Ch1.Init.Mode = DMA_NORMAL;
         g_HdmaTim1Ch1.Init.Priority = DMA_PRIORITY_LOW;
+#if defined(STM32F7xx)
         g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+#endif
         if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK)
         {
             error_handler();
@@ -167,7 +183,6 @@ extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
         __HAL_LINKDMA(tim_baseHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
     }
 }
-
 
 // called by HAL_TIM_Base_DeInit
 extern "C" void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
