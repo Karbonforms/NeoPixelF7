@@ -27,11 +27,6 @@
         "platformio.ini",
         "simple.cpp"
       ]
-    },
-    {
-      "name": "Blink",
-      "base": "examples/blink",
-      "files": ["blink.cpp", "blink.h"]
     }
   ]
 }
