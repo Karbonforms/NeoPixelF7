@@ -197,4 +197,10 @@ extern "C" void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef*)
 extern "C" void DMA2_Stream1_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
+<<<<<<< HEAD
 }
+=======
+}
+
+#pragma clang diagnostic pop
+>>>>>>> 8cc2c016f462a6c0809e552b9a45a2dfc4970d1e
