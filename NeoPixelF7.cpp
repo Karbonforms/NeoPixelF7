@@ -2,11 +2,16 @@
 #include <stm32l4xx_hal.h>
 #elif defined(STM32F7xx)
 #include <stm32f7xx_hal.h>
+#elif defined(STM32F3xx)
+#include <stm32f3xx_hal.h>
+#elif defined(STM32)
+#include <stm32f3xx_hal.h>
 #endif
+
 #include <chrono>
 
 #include "NeoPixelF7_config.h"
-
+#include "Arduino.h"
 using namespace std::chrono;
 
 TIM_HandleTypeDef g_TimHandle;
@@ -66,13 +71,17 @@ void calculate_timings()
 
     const auto reset_ticks = duration_cast<TimerTicks>(WS_2812_RESET_PERIOD_NS);
     g_ResetCycleCount = reset_ticks / (one_second_ticks / WS_2812_CLK_FREQ);
+
+    Serial.println(g_AutoReloadRegister);
+    Serial.println(g_ShortPulse);
+    Serial.println(g_ResetCycleCount);
 }
 
 void NeoPixelF7_init()
 {
     calculate_timings();
 
-#ifdef STM32L4xx
+#if defined(STM32L4xx) | defined(STM32F3xx)
     __HAL_RCC_DMA1_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
@@ -148,7 +157,11 @@ void NeoPixelF7_init()
     gpio_init_struct.Mode = GPIO_MODE_AF_PP;
     gpio_init_struct.Pull = GPIO_NOPULL;
     gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
+#if defined (STM32F3xx)
+    gpio_init_struct.Alternate = GPIO_AF6_TIM1;
+#else
     gpio_init_struct.Alternate = GPIO_AF1_TIM1;
+#endif
     HAL_GPIO_Init(GPIOA, &gpio_init_struct);
 }
 
@@ -164,6 +177,8 @@ extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
 #elif defined(STM32F7xx)
         g_HdmaTim1Ch1.Instance = DMA2_Stream1;
         g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
+#elif defined(STM32F3xx)
+        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
 #endif
         g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
         g_HdmaTim1Ch1.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -200,8 +215,14 @@ extern "C" void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef*)
     g_DataSentFlag = true;
 }
 
+#if defined(STM32F7xx)
 extern "C" void DMA2_Stream1_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
 }
-
+#elif defined(STM32L4xx) | defined(STM32F3xx)
+extern "C" void DMA1_Channel2_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
+}
+#endif

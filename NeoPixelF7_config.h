@@ -5,6 +5,8 @@
     #define TIMER_CLK_FREQ (216000000)
 #elif defined(STM32L4xx)
     #define TIMER_CLK_FREQ (80000000)
+#elif defined(STM32F3xx)
+    #define TIMER_CLK_FREQ (72000000)
 #endif
 
 #define NUM_PIXELS     (144)
