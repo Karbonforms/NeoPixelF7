@@ -93,9 +93,7 @@ void NeoPixelF7_init()
 #endif
 
     TIM_ClockConfigTypeDef          clock_source_config     = {0};
-    TIM_MasterConfigTypeDef         master_config           = {0};
     TIM_OC_InitTypeDef              config_oc               = {0};
-    TIM_BreakDeadTimeConfigTypeDef  break_dead_time_config  = {0};
 
     g_TimHandle.Instance = TIM1;
     g_TimHandle.Init.Period = g_AutoReloadRegister - 1;
@@ -112,18 +110,8 @@ void NeoPixelF7_init()
     {
         error_handler();
     }
-    if (HAL_TIMEx_MasterConfigSynchronization(&g_TimHandle, &master_config) != HAL_OK)
-    {
-        error_handler();
-    }
     config_oc.OCMode = TIM_OCMODE_PWM1;
     if (HAL_TIM_PWM_ConfigChannel(&g_TimHandle, &config_oc, TIM_CHANNEL_1) != HAL_OK)
-    {
-        error_handler();
-    }
-    break_dead_time_config.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-    break_dead_time_config.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
-    if (HAL_TIMEx_ConfigBreakDeadTime(&g_TimHandle, &break_dead_time_config) != HAL_OK)
     {
         error_handler();
     }
