@@ -32,6 +32,8 @@ uint32_t g_AutoReloadRegister = TIMER_CLK_FREQ / WS_2812_CLK_FREQ;
 uint32_t g_ShortPulse;
 uint32_t g_ResetCycleCount;
 
+bool g_init = false;
+
 //uint16_t*                    g_PwmData; //       [(24 * NUM_KEYS) + 50];
 uint16_t                    g_PwmData       [(24 * NUM_PIXELS) + 50];
 
@@ -76,6 +78,8 @@ void calculate_timings()
 
 void NeoPixelF7_init()
 {
+    if (g_init) return;
+
     calculate_timings();
 
 #if defined(STM32L4xx) | defined(STM32F3xx)
@@ -137,7 +141,15 @@ void NeoPixelF7_init()
     gpio_init_struct.Alternate = GPIO_AF1_TIM1;
 #endif
     HAL_GPIO_Init(GPIOA, &gpio_init_struct);
+
+    g_init = true;
 }
+
+//void NeoPixelF7_reset()
+//{
+//    g_init = false;
+//
+//}
 
 // called by HAL_TIM_Base_Init
 extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
