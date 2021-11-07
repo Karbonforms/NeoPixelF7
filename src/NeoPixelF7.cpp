@@ -93,12 +93,7 @@ void NeoPixelF7_init()
     TIM_BreakDeadTimeConfigTypeDef  break_dead_time_config  = {0};
 
     g_TimHandle.Instance = TIM1;
-    g_TimHandle.Init.Prescaler = 0;
-    g_TimHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
     g_TimHandle.Init.Period = g_AutoReloadRegister - 1;
-    g_TimHandle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    g_TimHandle.Init.RepetitionCounter = 0;
-    g_TimHandle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&g_TimHandle) != HAL_OK)
     {
         error_handler();
@@ -112,35 +107,17 @@ void NeoPixelF7_init()
     {
         error_handler();
     }
-    master_config.MasterOutputTrigger = TIM_TRGO_RESET;
-    master_config.MasterOutputTrigger2 = TIM_TRGO2_RESET;
-    master_config.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&g_TimHandle, &master_config) != HAL_OK)
     {
         error_handler();
     }
     config_oc.OCMode = TIM_OCMODE_PWM1;
-    config_oc.Pulse = 0;
-    config_oc.OCPolarity = TIM_OCPOLARITY_HIGH;
-    config_oc.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-    config_oc.OCFastMode = TIM_OCFAST_DISABLE;
-    config_oc.OCIdleState = TIM_OCIDLESTATE_RESET;
-    config_oc.OCNIdleState = TIM_OCNIDLESTATE_RESET;
     if (HAL_TIM_PWM_ConfigChannel(&g_TimHandle, &config_oc, TIM_CHANNEL_1) != HAL_OK)
     {
         error_handler();
     }
-    break_dead_time_config.OffStateRunMode = TIM_OSSR_DISABLE;
-    break_dead_time_config.OffStateIDLEMode = TIM_OSSI_DISABLE;
-    break_dead_time_config.LockLevel = TIM_LOCKLEVEL_OFF;
-    break_dead_time_config.DeadTime = 0;
-    break_dead_time_config.BreakState = TIM_BREAK_DISABLE;
     break_dead_time_config.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-    break_dead_time_config.BreakFilter = 0;
-    break_dead_time_config.Break2State = TIM_BREAK2_DISABLE;
     break_dead_time_config.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
-    break_dead_time_config.Break2Filter = 0;
-    break_dead_time_config.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
     if (HAL_TIMEx_ConfigBreakDeadTime(&g_TimHandle, &break_dead_time_config) != HAL_OK)
     {
         error_handler();
@@ -177,12 +154,9 @@ extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
         g_HdmaTim1Ch1.Instance = DMA1_Channel2;
 #endif
         g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
-        g_HdmaTim1Ch1.Init.PeriphInc = DMA_PINC_DISABLE;
         g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
         g_HdmaTim1Ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
         g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-        g_HdmaTim1Ch1.Init.Mode = DMA_NORMAL;
-        g_HdmaTim1Ch1.Init.Priority = DMA_PRIORITY_LOW;
 #if defined(STM32F7xx)
         g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 #endif
