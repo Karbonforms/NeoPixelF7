@@ -11,7 +11,8 @@
 #include <chrono>
 
 #include "NeoPixelF7_config.h"
-#include "Arduino.h"
+#include "NeoPixelF7.h"
+
 using namespace std::chrono;
 
 TIM_HandleTypeDef g_TimHandle;
