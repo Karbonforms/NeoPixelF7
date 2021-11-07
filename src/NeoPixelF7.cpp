@@ -209,3 +209,42 @@ extern "C" void DMA1_Channel2_IRQHandler(void)
     HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
 }
 #endif
+
+uint32_t Pixels::create_color(uint8_t red, uint8_t green, uint8_t blue)
+{
+    return (green << 16 | red << 8 | blue);
+}
+
+void Pixels::set_color(uint32_t index, uint32_t color)
+{
+    if (index >= len_) return;
+    pixels_[index] = color;
+}
+
+void Pixels::set_rgb(uint32_t index, uint8_t red, uint8_t green, uint8_t blue)
+{
+    if (index >= len_) return;
+    pixels_[index] = (green << 16 | red << 8 | blue);
+}
+
+void Pixels::clear_rgb(uint32_t index)
+{
+    if (index >= len_) return;
+    pixels_[index] = 0;
+}
+
+void Pixels::show()
+{
+    NeoPixelF7_show(pixels_, len_);
+}
+
+void Pixels::begin()
+{
+    NeoPixelF7_init();
+}
+
+Pixels::Pixels(uint32_t* arr, uint32_t len)
+:pixels_(arr)
+,len_(len)
+{}
+
