@@ -10,7 +10,6 @@
 
 #include <chrono>
 
-#include "NeoPixelF7_config.h"
 #include "NeoPixelF7.h"
 
 using namespace std::chrono;
@@ -56,6 +55,7 @@ void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
         for (int i = 23; i >= 0; i--)
         {
             g_PwmData[length++] = ptr[j] & (1 << i) ? g_ShortPulse << 1 : g_ShortPulse;
+//            g_PwmData[length++] = g_ShortPulse << (ptr[j] & (1 << i));
         }
     }
 
@@ -92,29 +92,19 @@ void NeoPixelF7_init()
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
 #endif
 
-    TIM_ClockConfigTypeDef          clock_source_config     = {0};
-    TIM_OC_InitTypeDef              config_oc               = {0};
+    TIM_ClockConfigTypeDef          tim_clk_conf   = {0};
+    TIM_OC_InitTypeDef              oc_conf        = {0};
 
     g_TimHandle.Instance = TIM1;
     g_TimHandle.Init.Period = g_AutoReloadRegister - 1;
-    if (HAL_TIM_Base_Init(&g_TimHandle) != HAL_OK)
-    {
-        error_handler();
-    }
-    clock_source_config.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-    if (HAL_TIM_ConfigClockSource(&g_TimHandle, &clock_source_config) != HAL_OK)
-    {
-        error_handler();
-    }
-    if (HAL_TIM_PWM_Init(&g_TimHandle) != HAL_OK)
-    {
-        error_handler();
-    }
-    config_oc.OCMode = TIM_OCMODE_PWM1;
-    if (HAL_TIM_PWM_ConfigChannel(&g_TimHandle, &config_oc, TIM_CHANNEL_1) != HAL_OK)
-    {
-        error_handler();
-    }
+
+    tim_clk_conf.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+    oc_conf.OCMode = TIM_OCMODE_PWM1;
+
+    if (HAL_TIM_Base_Init(&g_TimHandle) != HAL_OK) error_handler();
+    if (HAL_TIM_ConfigClockSource(&g_TimHandle, &tim_clk_conf) != HAL_OK) error_handler();
+    if (HAL_TIM_PWM_Init(&g_TimHandle) != HAL_OK) error_handler();
+    if (HAL_TIM_PWM_ConfigChannel(&g_TimHandle, &oc_conf, TIM_CHANNEL_1) != HAL_OK) error_handler();
 
     GPIO_InitTypeDef gpio_init_struct = {0};
 
@@ -161,10 +151,7 @@ extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
 #if defined(STM32F7xx)
         g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 #endif
-        if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK)
-        {
-            error_handler();
-        }
+        if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK) error_handler();
 
         __HAL_LINKDMA(tim_baseHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
     }
