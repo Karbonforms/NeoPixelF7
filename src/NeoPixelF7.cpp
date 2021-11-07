@@ -25,6 +25,8 @@ const nanoseconds   WS_2812_RESET_PERIOD_NS     = 50us;
 
 using TimerTicks = duration<uint32_t , std::ratio<1, TIMER_CLK_FREQ>>;
 
+const TimerTicks ONE_SECOND_TICKS = 1s;
+
 uint32_t g_AutoReloadRegister = TIMER_CLK_FREQ / WS_2812_CLK_FREQ;
 uint32_t g_ShortPulse;
 uint32_t g_ResetCycleCount;
@@ -64,13 +66,11 @@ void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
 
 void calculate_timings()
 {
-    TimerTicks one_second_ticks = 1s;
-
-    g_AutoReloadRegister = (one_second_ticks / WS_2812_CLK_FREQ).count();
+    g_AutoReloadRegister = (ONE_SECOND_TICKS / WS_2812_CLK_FREQ).count();
     g_ShortPulse = duration_cast<TimerTicks>(WS_2812_ZERO_HIGH_TIME_NS).count();
 
     const auto reset_ticks = duration_cast<TimerTicks>(WS_2812_RESET_PERIOD_NS);
-    g_ResetCycleCount = reset_ticks / (one_second_ticks / WS_2812_CLK_FREQ);
+    g_ResetCycleCount = reset_ticks / (ONE_SECOND_TICKS / WS_2812_CLK_FREQ);
 }
 
 void NeoPixelF7_init()
