@@ -1,8 +1,8 @@
 {
   "name": "NeoPixelF7",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "WS2812B Driver for stm32. (Not just F7!)",
-  "keywords": "WS2812B",
+  "keywords": ["WS2812", "WS2812B", "NeoPixel"],
   "repository":
   {
     "type": "git",
@@ -17,7 +17,7 @@
     }
   ],
   "license": "MIT",
-  "frameworks": "arduino,mbed",
+  "frameworks": ["arduino", "mbed", "stm32cube"],
   "platforms": "ststm32",
   "examples": [
     {
@@ -28,5 +28,10 @@
         "simple.cpp"
       ]
     }
-  ]
+  ],
+  "build": {
+    "flags": "-D HAL_TIM_MODULE_ONLY",
+    "includeDir": "src",
+    "libArchive": false
+  }
 }
