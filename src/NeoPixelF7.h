@@ -1,6 +1,18 @@
 #ifndef MIDILIGHTSF7_NEOPIXELF7_H
 #define MIDILIGHTSF7_NEOPIXELF7_H
 
+#if defined(STM32F7xx)
+#define TIMER_CLK_FREQ (216000000)
+#elif defined(STM32L4xx)
+#define TIMER_CLK_FREQ (80000000)
+#elif defined(STM32F3xx)
+#define TIMER_CLK_FREQ (72000000)
+#endif
+
+#ifndef NUM_PIXELS
+#define NUM_PIXELS     (1)
+#endif
+
 void NeoPixelF7_init();
 void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels);
 
