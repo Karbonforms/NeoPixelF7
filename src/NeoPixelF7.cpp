@@ -76,6 +76,8 @@ void calculate_timings()
     g_ResetCycleCount = reset_ticks / (ONE_SECOND_TICKS / WS_2812_CLK_FREQ);
 }
 
+extern "C" void myHAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle);
+
 void NeoPixelF7_init()
 {
     if (g_init) return;
@@ -102,6 +104,30 @@ void NeoPixelF7_init()
     oc_conf.OCMode = TIM_OCMODE_PWM1;
 
     if (HAL_TIM_Base_Init(&g_TimHandle) != HAL_OK) error_handler();
+
+    __HAL_RCC_TIM1_CLK_ENABLE();
+
+#if defined(STM32L4xx)
+    g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+    g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
+#elif defined(STM32F7xx)
+    g_HdmaTim1Ch1.Instance = DMA2_Stream1;
+        g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
+#elif defined(STM32F3xx)
+        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+#endif
+    g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
+    g_HdmaTim1Ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+#if defined(STM32F7xx)
+    g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+#endif
+
+    if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK) error_handler();
+
+    __HAL_LINKDMA(&g_TimHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
+
     if (HAL_TIM_ConfigClockSource(&g_TimHandle, &tim_clk_conf) != HAL_OK) error_handler();
     if (HAL_TIM_PWM_Init(&g_TimHandle) != HAL_OK) error_handler();
     if (HAL_TIM_PWM_ConfigChannel(&g_TimHandle, &oc_conf, TIM_CHANNEL_1) != HAL_OK) error_handler();
@@ -130,35 +156,35 @@ void NeoPixelF7_init()
 //}
 
 // called by HAL_TIM_Base_Init
-extern "C" void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
-{
-    if (tim_baseHandle->Instance == TIM1)
-    {
-        __HAL_RCC_TIM1_CLK_ENABLE();
-#if defined(STM32L4xx)
-        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
-        g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
-#elif defined(STM32F7xx)
-        g_HdmaTim1Ch1.Instance = DMA2_Stream1;
-        g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
-#elif defined(STM32F3xx)
-        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
-#endif
-        g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
-        g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
-        g_HdmaTim1Ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-        g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-#if defined(STM32F7xx)
-        g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-#endif
-        if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK) error_handler();
-
-        __HAL_LINKDMA(tim_baseHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
-    }
-}
+//extern "C" void myHAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
+//{
+//    if (tim_baseHandle->Instance == TIM1)
+//    {
+//        __HAL_RCC_TIM1_CLK_ENABLE();
+//#if defined(STM32L4xx)
+//        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+//        g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
+//#elif defined(STM32F7xx)
+//        g_HdmaTim1Ch1.Instance = DMA2_Stream1;
+//        g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
+//#elif defined(STM32F3xx)
+//        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+//#endif
+//        g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
+//        g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
+//        g_HdmaTim1Ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+//        g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+//#if defined(STM32F7xx)
+//        g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+//#endif
+//        if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK) error_handler();
+//
+//        __HAL_LINKDMA(tim_baseHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
+//    }
+//}
 
 // called by HAL_TIM_Base_DeInit
-extern "C" void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
+extern "C" void myHAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 {
     if (tim_baseHandle->Instance == TIM1)
     {
