@@ -9,6 +9,7 @@
 #endif
 
 #include <chrono>
+#include <cstring>
 
 #include "NeoPixelF7.h"
 
@@ -232,6 +233,11 @@ void Pixels::clear_rgb(uint32_t index)
 {
     if (index >= len_) return;
     pixels_[index] = 0;
+}
+
+void Pixels::clear_all()
+{
+    memset(pixels_, 0, NUM_PIXELS * sizeof(uint32_t));
 }
 
 void Pixels::show()
