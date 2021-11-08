@@ -13,6 +13,8 @@
 
 #include "NeoPixelF7.h"
 
+#define METRICS
+
 using namespace std::chrono;
 
 TIM_HandleTypeDef g_TimHandle;
@@ -35,7 +37,12 @@ uint32_t g_ResetCycleCount;
 bool g_init = false;
 
 //uint16_t*                    g_PwmData; //       [(24 * NUM_KEYS) + 50];
-uint16_t                    g_PwmData       [(24 * NUM_PIXELS) + 50];
+uint16_t                    g_PwmData0       [(24 * NUM_PIXELS) + 50];
+uint16_t                    g_PwmData1       [(24 * NUM_PIXELS) + 50];
+uint16_t* pwm_data[] = {g_PwmData0, g_PwmData1};
+bool buffer_index = false;
+uint16_t* current_pwm_data = pwm_data[buffer_index];
+uint32_t g_DataWaiting = false;
 
 void error_handler()
 {
@@ -46,8 +53,10 @@ void error_handler()
 
 void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
 {
-    while (!g_DataSentFlag);
-    g_DataSentFlag = false;
+    buffer_index = ! buffer_index;
+    current_pwm_data = pwm_data[buffer_index];
+
+
 
     uint32_t length = 0;
 
@@ -55,17 +64,25 @@ void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
     {
         for (int i = 23; i >= 0; i--)
         {
-            g_PwmData[length++] = ptr[j] & (1 << i) ? g_ShortPulse << 1 : g_ShortPulse;
+            current_pwm_data[length++] = ptr[j] & (1 << i) ? g_ShortPulse << 1 : g_ShortPulse;
 //            g_PwmData[length++] = g_ShortPulse << (ptr[j] & (1 << i));
         }
     }
 
     for (uint32_t i = 0; i < g_ResetCycleCount + 1; i++)
     {
-        g_PwmData[length++] = 0;
+        current_pwm_data[length++] = 0;
     }
 
-    HAL_TIM_PWM_Start_DMA(&g_TimHandle, TIM_CHANNEL_1, (uint32_t*) g_PwmData, length);
+#ifdef METRICS
+    uint32_t start = HAL_GetTick();
+#endif
+    while (!g_DataSentFlag);
+#ifdef METRICS
+    g_DataWaiting = HAL_GetTick() - start;
+#endif
+    g_DataSentFlag = false;
+    HAL_TIM_PWM_Start_DMA(&g_TimHandle, TIM_CHANNEL_1, (uint32_t*) current_pwm_data, length);
 }
 
 void calculate_timings()
@@ -147,6 +164,7 @@ void NeoPixelF7_init()
 #endif
     HAL_GPIO_Init(GPIOA, &gpio_init_struct);
 
+
     g_init = true;
 }
 
@@ -226,7 +244,7 @@ void Pixels::set_color(uint32_t index, uint32_t color)
 void Pixels::set_rgb(uint32_t index, uint8_t red, uint8_t green, uint8_t blue)
 {
     if (index >= len_) return;
-    pixels_[index] = (green << 16 | red << 8 | blue);
+    pixels_[index] = create_color(red, green, blue);
 }
 
 void Pixels::clear_rgb(uint32_t index)
