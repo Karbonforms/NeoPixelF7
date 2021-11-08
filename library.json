@@ -1,8 +1,8 @@
 {
   "name": "NeoPixelF7",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "WS2812B Driver for stm32. (Not just F7!)",
-  "keywords": ["WS2812", "WS2812B", "NeoPixel"],
+  "keywords": ["WS2812", "WS2812B", "NeoPixel", "LED"],
   "repository":
   {
     "type": "git",
@@ -24,8 +24,7 @@
       "name": "simple",
       "base": "examples/simple",
       "files": [
-        "platformio.ini",
-        "simple.cpp"
+        "simple.cpp","platformio.ini"
       ]
     }
   ],
