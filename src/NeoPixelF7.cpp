@@ -1,11 +1,15 @@
 #if defined(STM32L4xx)
-#include <stm32l4xx_hal.h>
+#   include <stm32l4xx_hal.h>
 #elif defined(STM32F7xx)
-#include <stm32f7xx_hal.h>
+#   include <stm32f7xx_hal.h>
 #elif defined(STM32F3xx)
-#include <stm32f3xx_hal.h>
+#   include <stm32f3xx_hal.h>
 #elif defined(STM32)
-#include <stm32f3xx_hal.h>
+#   include <stm32f3xx_hal.h>
+#elif defined(STM32G0xx)
+#   include <stm32g0xx_hal.h>
+#elif defined(STM32G4xx)
+#   include <stm32g4xx_hal.h>
 #endif
 
 #include <chrono>
@@ -18,7 +22,7 @@
 using namespace std::chrono;
 
 TIM_HandleTypeDef g_TimHandle;
-DMA_HandleTypeDef g_HdmaTim1Ch1;
+DMA_HandleTypeDef g_TimerDMA;
 
 volatile bool g_DataSentFlag = true;
 
@@ -102,7 +106,7 @@ void NeoPixelF7_init()
 
     calculate_timings();
 
-#if defined(STM32L4xx) | defined(STM32F3xx)
+#if defined(STM32L4xx) || defined(STM32F3xx)
     __HAL_RCC_DMA1_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
@@ -110,6 +114,15 @@ void NeoPixelF7_init()
     __HAL_RCC_DMA2_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+#elif defined(STM32G0xx)
+    __HAL_RCC_DMA1_CLK_ENABLE();
+    HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+#elif defined(STM32G4xx)
+    __HAL_RCC_DMAMUX1_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE();
+    HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 #endif
 
     TIM_ClockConfigTypeDef          tim_clk_conf   = {0};
@@ -130,21 +143,24 @@ void NeoPixelF7_init()
     g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
 #elif defined(STM32F7xx)
     g_HdmaTim1Ch1.Instance = DMA2_Stream1;
-        g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
+    g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
 #elif defined(STM32F3xx)
-        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+    g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+#elif defined(STM32G0xx) || defined(STM32G4xx)
+    g_TimerDMA.Instance = DMA1_Channel1;
+    g_TimerDMA.Init.Request = DMA_REQUEST_TIM1_CH1;
 #endif
-    g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
-    g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
-    g_HdmaTim1Ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    g_TimerDMA.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    g_TimerDMA.Init.MemInc = DMA_MINC_ENABLE;
+    g_TimerDMA.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    g_TimerDMA.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
 #if defined(STM32F7xx)
     g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 #endif
 
-    if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK) error_handler();
+    if (HAL_DMA_Init(&g_TimerDMA) != HAL_OK) error_handler();
 
-    __HAL_LINKDMA(&g_TimHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
+    __HAL_LINKDMA(&g_TimHandle, hdma[TIM_DMA_ID_CC1], g_TimerDMA);
 
     if (HAL_TIM_ConfigClockSource(&g_TimHandle, &tim_clk_conf) != HAL_OK) error_handler();
     if (HAL_TIM_PWM_Init(&g_TimHandle) != HAL_OK) error_handler();
@@ -157,13 +173,14 @@ void NeoPixelF7_init()
     gpio_init_struct.Mode = GPIO_MODE_AF_PP;
     gpio_init_struct.Pull = GPIO_NOPULL;
     gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
-#if defined (STM32F3xx)
+#if defined (STM32F3xx) || defined(STM32G4xx)
     gpio_init_struct.Alternate = GPIO_AF6_TIM1;
+#elif defined(STM32G0xx)
+    gpio_init_struct.Alternate = GPIO_AF2_TIM1;
 #else
     gpio_init_struct.Alternate = GPIO_AF1_TIM1;
 #endif
     HAL_GPIO_Init(GPIOA, &gpio_init_struct);
-
 
     g_init = true;
 }

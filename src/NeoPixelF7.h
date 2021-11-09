@@ -1,17 +1,27 @@
 #ifndef MIDILIGHTSF7_NEOPIXELF7_H
 #define MIDILIGHTSF7_NEOPIXELF7_H
 
-#if defined(STM32F7xx)
-#define TIMER_CLK_FREQ (216000000)
-#elif defined(STM32L4xx)
-#define TIMER_CLK_FREQ (80000000)
-#elif defined(STM32F3xx)
-#define TIMER_CLK_FREQ (72000000)
+// These assume running at full speed. (Which is the case under Arduino and MBed).
+#ifndef TIMER_CLK_FREQ
+#   if defined(STM32F7xx)
+#       define TIMER_CLK_FREQ (216000000)
+#   elif defined(STM32L4xx)
+#       define TIMER_CLK_FREQ (80000000)
+#   elif defined(STM32F3xx)
+#       define TIMER_CLK_FREQ (72000000)
+#   elif defined(STM32G0xx)
+#       define TIMER_CLK_FREQ (64000000)
+#   elif defined(STM32G4xx)
+#       define TIMER_CLK_FREQ (170000000)
+#   endif
 #endif
 
+// On PlatformIO you can use "build_flags = -D NUM_PIXELS=(n)"
 #ifndef NUM_PIXELS
 #define NUM_PIXELS     (1)
 #endif
+
+
 
 void NeoPixelF7_init();
 void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels);
@@ -30,8 +40,6 @@ public:
 private:
     uint32_t* pixels_;
     uint32_t  len_;
-
-
 };
 
 #endif //MIDILIGHTSF7_NEOPIXELF7_H
