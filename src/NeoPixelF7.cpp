@@ -1,67 +1,85 @@
-#if defined(STM32L4xx)
-#   include <stm32l4xx_hal.h>
-#elif defined(STM32F7xx)
-#   include <stm32f7xx_hal.h>
-#elif defined(STM32F3xx)
-#   include <stm32f3xx_hal.h>
-#elif defined(STM32)
-#   include <stm32f3xx_hal.h>
-#elif defined(STM32G0xx)
-#   include <stm32g0xx_hal.h>
-#elif defined(STM32G4xx)
-#   include <stm32g4xx_hal.h>
-#endif
-
-#include <chrono>
+//#include <chrono>
 #include <cstring>
-
 #include "NeoPixelF7.h"
+
+#if defined(ARDUINO) 
+    #include <Arduino.h>
+#elif defined(__MBED__)
+    #include <mbed.h>
+#endif
 
 #define METRICS
 
-using namespace std::chrono;
+//using namespace std::chrono;
 
 TIM_HandleTypeDef g_TimHandle;
 DMA_HandleTypeDef g_TimerDMA;
 
 volatile bool g_DataSentFlag = true;
 
-const uint32_t      WS_2812_CLK_FREQ            = 800000;
-const nanoseconds   WS_2812_ZERO_HIGH_TIME_NS   = 400ns;
-const nanoseconds   WS_2812_RESET_PERIOD_NS     = 50us;
+#define WS_2812_CLK_FREQ            (800'000u)
+#define WS_2812_ZERO_HIGH_TIME_NS   (400ull)
+#define WS_2812_RESET_PERIOD_NS     (50'000ull)
+#define ONE_SECOND_NS               (1'000'000'000ull)
+//const nanoseconds   WS_2812_ZERO_HIGH_TIME_NS   = 400ns;
+//const nanoseconds   WS_2812_RESET_PERIOD_NS     = 50us;
 
-using TimerTicks = duration<uint32_t , std::ratio<1, TIMER_CLK_FREQ>>;
+uint32_t get_timer_clock_speed()
+{
+#if defined(STM32G0xx) || defined(STM32F0xx)
+    auto rval = HAL_RCC_GetPCLK1Freq();
+    auto mask = RCC_CFGR_PPRE;
+#else
+    auto rval = HAL_RCC_GetPCLK2Freq();
+    auto mask = RCC_CFGR_PPRE2;
+#endif
+    if((RCC->CFGR & mask) != 0)
+        rval *= 2;
+    return rval;
+}
 
-const TimerTicks ONE_SECOND_TICKS = 1s;
+//using TimerTicks = duration<uint32_t , std::ratio<1, TIMER_CLK_FREQ>>;
+//
+//const TimerTicks ONE_SECOND_TICKS = 1s;
 
-uint32_t g_AutoReloadRegister = TIMER_CLK_FREQ / WS_2812_CLK_FREQ;
+uint32_t g_AutoReloadRegister; // = TIMER_CLK_FREQ / WS_2812_CLK_FREQ;
 uint32_t g_ShortPulse;
 uint32_t g_ResetCycleCount;
 
+uint32_t g_DataWaiting = false;
+bool buffer_index = false;
 bool g_init = false;
 
-//uint16_t*                    g_PwmData; //       [(24 * NUM_KEYS) + 50];
-uint16_t                    g_PwmData0       [(24 * NUM_PIXELS) + 50];
-uint16_t                    g_PwmData1       [(24 * NUM_PIXELS) + 50];
-uint16_t* pwm_data[] = {g_PwmData0, g_PwmData1};
-bool buffer_index = false;
-uint16_t* current_pwm_data = pwm_data[buffer_index];
-uint32_t g_DataWaiting = false;
+uint8_t                    g_PwmData0       [(24 * NUM_PIXELS) + 50];
+uint8_t                    g_PwmData1       [(24 * NUM_PIXELS) + 50];
+//uint16_t                    g_PwmData0       [(24 * NUM_PIXELS) + 50];
+//uint16_t                    g_PwmData1       [(24 * NUM_PIXELS) + 50];
+uint8_t* pwm_data[] = {g_PwmData0, g_PwmData1};
+uint8_t* current_pwm_data = pwm_data[buffer_index];
+//uint16_t* pwm_data[] = {g_PwmData0, g_PwmData1};
+//uint16_t* current_pwm_data = pwm_data[buffer_index];
 
-void error_handler()
+void print(const char* msg)
 {
+#if defined(ARDUINO)
+    if (Serial)
+        Serial.println(msg);
+#elif defined(__MBED__)
+    printf(msg);
+#endif
+}
+
+[[noreturn]] void error_handler(const char* msg = nullptr)
+{
+    if (msg) print(msg);
     __disable_irq();
-    while (true)
-    {}
+    while (true);
 }
 
 void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
 {
     buffer_index = ! buffer_index;
     current_pwm_data = pwm_data[buffer_index];
-
-
-
     uint32_t length = 0;
 
     for (uint32_t j = 0; j < num_pixels; ++j)
@@ -91,14 +109,18 @@ void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
 
 void calculate_timings()
 {
-    g_AutoReloadRegister = (ONE_SECOND_TICKS / WS_2812_CLK_FREQ).count();
-    g_ShortPulse = duration_cast<TimerTicks>(WS_2812_ZERO_HIGH_TIME_NS).count();
+    uint32_t timhz = get_timer_clock_speed();
+//    if (TIMER_CLK_FREQ != timhz)
+//        error_handler();
 
-    const auto reset_ticks = duration_cast<TimerTicks>(WS_2812_RESET_PERIOD_NS);
-    g_ResetCycleCount = reset_ticks / (ONE_SECOND_TICKS / WS_2812_CLK_FREQ);
+    g_AutoReloadRegister    = timhz / WS_2812_CLK_FREQ;
+    g_ShortPulse            = timhz * WS_2812_ZERO_HIGH_TIME_NS / ONE_SECOND_NS;
+    g_ResetCycleCount       = timhz * WS_2812_RESET_PERIOD_NS / ONE_SECOND_NS / g_AutoReloadRegister;
+//    g_AutoReloadRegister = (ONE_SECOND_TICKS / WS_2812_CLK_FREQ).count();
+//    g_ShortPulse = duration_cast<TimerTicks>(WS_2812_ZERO_HIGH_TIME_NS).count();
+    //    const auto reset_ticks = duration_cast<TimerTicks>(WS_2812_RESET_PERIOD_NS);
+    //    g_ResetCycleCount = reset_ticks / (ONE_SECOND_TICKS / WS_2812_CLK_FREQ);
 }
-
-extern "C" void myHAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle);
 
 void NeoPixelF7_init()
 {
@@ -106,7 +128,7 @@ void NeoPixelF7_init()
 
     calculate_timings();
 
-#if defined(STM32L4xx) || defined(STM32F3xx)
+#if defined(STM32L4xx) || defined(STM32F3xx) || defined(STM32F1xx)
     __HAL_RCC_DMA1_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
@@ -123,6 +145,10 @@ void NeoPixelF7_init()
     __HAL_RCC_DMA1_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+#elif defined(STM32F0xx)
+    __HAL_RCC_DMA1_CLK_ENABLE();
+    HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 #endif
 
     TIM_ClockConfigTypeDef          tim_clk_conf   = {0};
@@ -139,13 +165,13 @@ void NeoPixelF7_init()
     __HAL_RCC_TIM1_CLK_ENABLE();
 
 #if defined(STM32L4xx)
-    g_HdmaTim1Ch1.Instance = DMA1_Channel2;
-    g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
+    g_TimerDMA.Instance = DMA1_Channel2;
+    g_TimerDMA.Init.Request = DMA_REQUEST_7;
 #elif defined(STM32F7xx)
-    g_HdmaTim1Ch1.Instance = DMA2_Stream1;
-    g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
-#elif defined(STM32F3xx)
-    g_HdmaTim1Ch1.Instance = DMA1_Channel2;
+    g_TimerDMA.Instance = DMA2_Stream1;
+    g_TimerDMA.Init.Channel = DMA_CHANNEL_6;
+#elif defined(STM32F3xx) || defined(STM32F1xx) || defined(STM32F0xx)
+    g_TimerDMA.Instance = DMA1_Channel2;
 #elif defined(STM32G0xx) || defined(STM32G4xx)
     g_TimerDMA.Instance = DMA1_Channel1;
     g_TimerDMA.Init.Request = DMA_REQUEST_TIM1_CH1;
@@ -153,7 +179,7 @@ void NeoPixelF7_init()
     g_TimerDMA.Init.Direction = DMA_MEMORY_TO_PERIPH;
     g_TimerDMA.Init.MemInc = DMA_MINC_ENABLE;
     g_TimerDMA.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    g_TimerDMA.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    g_TimerDMA.Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
 #if defined(STM32F7xx)
     g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 #endif
@@ -171,13 +197,13 @@ void NeoPixelF7_init()
     __HAL_RCC_GPIOA_CLK_ENABLE();
     gpio_init_struct.Pin = GPIO_PIN_8;
     gpio_init_struct.Mode = GPIO_MODE_AF_PP;
-    gpio_init_struct.Pull = GPIO_NOPULL;
-    gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
+//    gpio_init_struct.Pull = GPIO_NOPULL;
+//    gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
 #if defined (STM32F3xx) || defined(STM32G4xx)
     gpio_init_struct.Alternate = GPIO_AF6_TIM1;
-#elif defined(STM32G0xx)
+#elif defined(STM32G0xx) || defined(STM32F0xx)
     gpio_init_struct.Alternate = GPIO_AF2_TIM1;
-#else
+#elif defined(STM32F7xx) || defined(STM32L4xx)
     gpio_init_struct.Alternate = GPIO_AF1_TIM1;
 #endif
     HAL_GPIO_Init(GPIOA, &gpio_init_struct);
@@ -191,44 +217,6 @@ void NeoPixelF7_init()
 //
 //}
 
-// called by HAL_TIM_Base_Init
-//extern "C" void myHAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
-//{
-//    if (tim_baseHandle->Instance == TIM1)
-//    {
-//        __HAL_RCC_TIM1_CLK_ENABLE();
-//#if defined(STM32L4xx)
-//        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
-//        g_HdmaTim1Ch1.Init.Request = DMA_REQUEST_7;
-//#elif defined(STM32F7xx)
-//        g_HdmaTim1Ch1.Instance = DMA2_Stream1;
-//        g_HdmaTim1Ch1.Init.Channel = DMA_CHANNEL_6;
-//#elif defined(STM32F3xx)
-//        g_HdmaTim1Ch1.Instance = DMA1_Channel2;
-//#endif
-//        g_HdmaTim1Ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
-//        g_HdmaTim1Ch1.Init.MemInc = DMA_MINC_ENABLE;
-//        g_HdmaTim1Ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-//        g_HdmaTim1Ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-//#if defined(STM32F7xx)
-//        g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-//#endif
-//        if (HAL_DMA_Init(&g_HdmaTim1Ch1) != HAL_OK) error_handler();
-//
-//        __HAL_LINKDMA(tim_baseHandle, hdma[TIM_DMA_ID_CC1], g_HdmaTim1Ch1);
-//    }
-//}
-
-// called by HAL_TIM_Base_DeInit
-extern "C" void myHAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
-{
-    if (tim_baseHandle->Instance == TIM1)
-    {
-        __HAL_RCC_TIM1_CLK_DISABLE();
-        HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC1]);
-    }
-}
-
 extern "C" void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef*)
 {
     HAL_TIM_PWM_Stop_DMA(&g_TimHandle, TIM_CHANNEL_1);
@@ -238,33 +226,43 @@ extern "C" void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef*)
 #if defined(STM32F7xx)
 extern "C" void DMA2_Stream1_IRQHandler(void)
 {
-    HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
+    HAL_DMA_IRQHandler(&g_TimerDMA);
 }
-#elif defined(STM32L4xx) | defined(STM32F3xx)
+#elif defined(STM32L4xx) || defined(STM32F3xx) || defined(STM32F1xx)
 extern "C" void DMA1_Channel2_IRQHandler(void)
 {
-    HAL_DMA_IRQHandler(&g_HdmaTim1Ch1);
+    HAL_DMA_IRQHandler(&g_TimerDMA);
+}
+#elif defined(STM32G0xx) || defined(STM32G4xx)
+extern "C" void DMA1_Channel1_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&g_TimerDMA);
+}
+#elif defined(STM32F0xx)
+extern "C" void DMA1_Channel2_3_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&g_TimerDMA);
 }
 #endif
 
-uint32_t Pixels::create_color(uint8_t red, uint8_t green, uint8_t blue)
+uint32_t Pixels::create_color(const uint8_t& red, const uint8_t& green, const uint8_t& blue)
 {
     return (green << 16 | red << 8 | blue);
 }
 
-void Pixels::set_color(uint32_t index, uint32_t color)
+void Pixels::set_color(const uint32_t& index, const uint32_t& color)
 {
     if (index >= len_) return;
     pixels_[index] = color;
 }
 
-void Pixels::set_rgb(uint32_t index, uint8_t red, uint8_t green, uint8_t blue)
+void Pixels::set_rgb(const uint32_t& index, const uint8_t& red, const uint8_t& green, const uint8_t& blue)
 {
     if (index >= len_) return;
     pixels_[index] = create_color(red, green, blue);
 }
 
-void Pixels::clear_rgb(uint32_t index)
+void Pixels::clear(const uint32_t& index)
 {
     if (index >= len_) return;
     pixels_[index] = 0;
