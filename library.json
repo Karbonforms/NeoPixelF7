@@ -1,6 +1,6 @@
 {
   "name": "NeoPixelF7",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "WS2812B Driver for stm32. (Not just F7!)",
   "keywords": ["WS2812", "WS2812B", "NeoPixel", "LED"],
   "repository":
@@ -29,7 +29,6 @@
     }
   ],
   "build": {
-    "flags": "-D HAL_TIM_MODULE_ONLY",
     "includeDir": "src",
     "libArchive": false
   }
