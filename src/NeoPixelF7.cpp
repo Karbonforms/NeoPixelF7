@@ -119,6 +119,7 @@ void NeoPixelF7_show(const uint32_t* ptr, uint32_t num_pixels)
 void calculate_timings()
 {
     uint32_t timhz = get_timer_clock_speed();
+
 //    if (TIMER_CLK_FREQ != timhz)
 //        error_handler();
 
@@ -129,6 +130,16 @@ void calculate_timings()
 //    g_ShortPulse = duration_cast<TimerTicks>(WS_2812_ZERO_HIGH_TIME_NS).count();
     //    const auto reset_ticks = duration_cast<TimerTicks>(WS_2812_RESET_PERIOD_NS);
     //    g_ResetCycleCount = reset_ticks / (ONE_SECOND_TICKS / WS_2812_CLK_FREQ);
+
+#if defined(METRICS)
+    Serial.println(timhz);
+    Serial.println(g_AutoReloadRegister);
+    Serial.println(g_ShortPulse);
+    Serial.println(g_ResetCycleCount);
+#endif
+
+    if (g_ResetCycleCount > RESET_PADDING)
+        error_handler("ERROR: RESET_PADDING too small! \r\nRESET_PADDING=%d\r\nRequired=%d", RESET_PADDING, g_ResetCycleCount);
 }
 
 void NeoPixelF7_init()

@@ -2,7 +2,7 @@
 #define MIDILIGHTSF7_NEOPIXELF7_H
 
 
-
+#define RESET_PADDING 50
 #if defined(TARGET_STM32F7)
 #define STM32F7xx
 #elif defined(TARGET_STM32L4)
