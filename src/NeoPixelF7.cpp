@@ -50,14 +50,23 @@ uint32_t g_DataWaiting = false;
 bool buffer_index = false;
 bool g_init = false;
 
-uint8_t                    g_PwmData0       [(24 * NUM_PIXELS) + 50];
-uint8_t                    g_PwmData1       [(24 * NUM_PIXELS) + 50];
-//uint16_t                    g_PwmData0       [(24 * NUM_PIXELS) + 50];
-//uint16_t                    g_PwmData1       [(24 * NUM_PIXELS) + 50];
-uint8_t* pwm_data[] = {g_PwmData0, g_PwmData1};
-uint8_t* current_pwm_data = pwm_data[buffer_index];
-//uint16_t* pwm_data[] = {g_PwmData0, g_PwmData1};
-//uint16_t* current_pwm_data = pwm_data[buffer_index];
+constexpr uint32_t PWM_DMA_DATASIZE = (24 * NUM_PIXELS) + RESET_PADDING;
+
+#if defined(STM32F7xx)
+    using DMA_DataType = uint16_t;
+#else
+    using DMA_DataType = uint8_t;
+#endif
+
+DMA_DataType g_PwmData0 [PWM_DMA_DATASIZE];
+DMA_DataType g_PwmData1 [PWM_DMA_DATASIZE];
+DMA_DataType* pwm_data[] = {g_PwmData0, g_PwmData1 };
+DMA_DataType* current_pwm_data = pwm_data[buffer_index];
+
+//uint8_t                    g_PwmData0       [PWM_DMA_DATASIZE];
+//uint8_t                    g_PwmData1       [PWM_DMA_DATASIZE];
+//uint8_t* pwm_data[] = {g_PwmData0, g_PwmData1};
+//uint8_t* current_pwm_data = pwm_data[buffer_index];
 
 void print(const char* fmt, ...)
 {
@@ -199,9 +208,14 @@ void NeoPixelF7_init()
     g_TimerDMA.Init.Direction = DMA_MEMORY_TO_PERIPH;
     g_TimerDMA.Init.MemInc = DMA_MINC_ENABLE;
     g_TimerDMA.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+#if defined(STM32F7xx) //F7 packs data so can't use 8bit
+    g_TimerDMA.Init.MemDataAlignment = DMA_PDATAALIGN_HALFWORD;
+#else
     g_TimerDMA.Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
+#endif
+//    g_TimerDMA.Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
 #if defined(STM32F7xx)
-    g_HdmaTim1Ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    g_TimerDMA.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 #endif
 
     if (HAL_DMA_Init(&g_TimerDMA) != HAL_OK) error_handler();
