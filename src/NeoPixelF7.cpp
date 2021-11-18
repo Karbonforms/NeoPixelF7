@@ -59,19 +59,28 @@ uint8_t* current_pwm_data = pwm_data[buffer_index];
 //uint16_t* pwm_data[] = {g_PwmData0, g_PwmData1};
 //uint16_t* current_pwm_data = pwm_data[buffer_index];
 
-void print(const char* msg)
+void print(const char* fmt, ...)
 {
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+
 #if defined(ARDUINO)
     if (Serial)
-        Serial.println(msg);
+        Serial.printf(fmt, args);
 #elif defined(__MBED__)
-    printf(msg);
+    printf(fmt, args);
 #endif
+
+    va_end(args);
 }
 
-[[noreturn]] void error_handler(const char* msg = nullptr)
+[[noreturn]] void error_handler(const char* fmt = nullptr, ...)
 {
-    if (msg) print(msg);
+    va_list args;
+    va_start(args, fmt);
+    if (fmt) print(fmt, args);
+    va_end(args);
     __disable_irq();
     while (true);
 }
