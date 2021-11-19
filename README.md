@@ -1,8 +1,8 @@
-# NeoPixelF7
+# NeoPixelSTM32
 
 Update 1.1.0: Timer clock speed is now calculated.
 
-WS2812B Driver for stm32. (Not just F7!)
+WS2812B Driver for STM32
 Uses Timer PWM with DMA. No buggering about with NOPs and such nonsense.
 
 Supports:
